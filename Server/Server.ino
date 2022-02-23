@@ -1,24 +1,20 @@
+
 #include <esp_now.h>
 #include <WiFi.h>
 
+
 // MAC: 4C:11:AE:CB:6D:74
-// Structure example to receive data
-// Must match the sender structure
 typedef struct struct_message {
   int id;
-  int x;
-  int y;
+  float x;
+  float y;
 }struct_message;
 
 // Create a struct_message called myData
 struct_message myData;
 struct_message board1;
-
-
-// Create an array with all the structures
 struct_message boardsStruct[1] = {board1};
 
-// callback function that will be executed when data is received
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) {
   char macStr[18];
   Serial.print("Packet received from: ");
@@ -30,38 +26,25 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) 
   // Update the structures with the new incoming data
   boardsStruct[myData.id-1].x = myData.x;
   boardsStruct[myData.id-1].y = myData.y;
-  Serial.printf("x value: %d \n", boardsStruct[myData.id-1].x);
-  Serial.printf("y value: %d \n", boardsStruct[myData.id-1].y);
+  Serial.printf("Temperatur value: %d \n", boardsStruct[myData.id-1].x);
+  Serial.printf("Humidity value: %d \n", boardsStruct[myData.id-1].y);
   Serial.println();
 }
  
 void setup() {
-  //Initialize Serial Monitor
   Serial.begin(115200);
-  
-  //Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
-
-  //Init ESP-NOW
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
-  
-  // Once ESPNow is successfully Init, we will register for recv CB to
-  // get recv packer info
   esp_now_register_recv_cb(OnDataRecv);
 }
- 
+
+
 void loop() {
   // Acess the variables for each board
-  int board1X = boardsStruct[0].x;
-  int board1Y = boardsStruct[0].y;
-  /*
-  int board2X = boardsStruct[1].x;
-  int board2Y = boardsStruct[1].y;
-  int board3X = boardsStruct[2].x;
-  int board3Y = boardsStruct[2].y;*/
-
+  float board1X = boardsStruct[0].x;
+  float board1Y = boardsStruct[0].y;
   delay(5000);  
 }
