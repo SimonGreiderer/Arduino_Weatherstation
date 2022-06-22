@@ -11,7 +11,7 @@
 #include <FontRobotron.h>
 #include <ThingsBoard.h>
 
-#define LED_PIN        4
+#define LED_PIN        5
 #define COLOR_ORDER    GRB
 #define CHIPSET        WS2812B
 
@@ -20,8 +20,8 @@
 #define MATRIX_TYPE    VERTICAL_ZIGZAG_MATRIX // Wie sind die LEDs angeordnet
 
 #define COUNT_OF(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
-#define WIFI_AP_NAME        "SSID"
-#define WIFI_PASSWORD       "PW"
+#define WIFI_AP_NAME        "TheHotspot"
+#define WIFI_PASSWORD       "Aot>Arcane"
 #define TOKEN               "Weatherstation"
 #define THINGSBOARD_SERVER  "demo.thingsboard.io"
 
@@ -45,7 +45,7 @@ struct_message myData;
 struct_message board1;
 struct_message boardsStruct[1] = {board1};
 
-const unsigned char TxtDemo[] = { EFFECT_SCROLL_LEFT EFFECT_HSV_CV "\x00\xff\xff\x40\xff\xff" "TEMPERATUR"};
+const unsigned char TxtDemo[] = { EFFECT_SCROLL_LEFT EFFECT_HSV_CV "\x00\xff\xff\x40\xff\xff" "  starting..."};
 
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) {
   char macStr[18];
@@ -70,16 +70,16 @@ void setup() {
   xTaskCreatePinnedToCore(
     receivingData
     ,  "ReceivingData"   // A name just for humans
-    ,  1024  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  2048  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
     ,  2  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
     ,  NULL
-    ,  ARDUINO_RUNNING_CORE);
+    ,  ARDUINO_RUNNING_CORE); 
 
   xTaskCreatePinnedToCore(
     ledPanel
     ,  "LedPanel"
-    ,  1024  // Stack size
+    ,  2048  // Stack size
     ,  NULL
     ,  1  // Priority
     ,  NULL
@@ -97,7 +97,7 @@ void setupLedPanel() {
   ScrollingMsg.SetTextColrOptions(COLR_RGB | COLR_SINGLE, 0xff, 0x00, 0xff);
 }
 
-void setupReceivingData() {
+void setupReceivingData() { 
   WiFi.mode(WIFI_STA);
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
@@ -132,18 +132,16 @@ void reconnect() {
     Serial.println("Connected to AP");
   }
 }
-
 void ledPanel(void *pvParameters) {
   (void) pvParameters;
   for (;;) {
     if (ScrollingMsg.UpdateText() == -1) {
-      unsigned char temperatur[17];
-      sprintf((char *)temperatur, " WARM: %g", boardsStruct[0].x);
+      unsigned char temperatur[22];
+      sprintf((char *)temperatur, "     %gC  -  %s     ", boardsStruct[0].x, String(boardsStruct[0].y) + "%"); // String() not tested!
       ScrollingMsg.SetText((unsigned char *)TxtDemo, sizeof(TxtDemo) - 1);
       ScrollingMsg.SetScrollDirection(SCROLL_LEFT);
       ScrollingMsg.SetTextColrOptions(COLR_HSV | COLR_GRAD_CH, 0x00, 0xff, 0xff, 0x40, 0xff, 0xff);
       ScrollingMsg.SetText(temperatur, sizeof(temperatur) - 1);
-      vTaskDelay(20);
     }
     else
       FastLED.show();
@@ -158,13 +156,13 @@ void receivingData(void *pvParameters) {
     // Acess the variables for each board
     float board1X = boardsStruct[0].x;
     float board1Y = boardsStruct[0].y;
-    sendingDataThingsboard(board1X, board1Y);
+    //sendingDataThingsboard(board1X, board1Y);
     vTaskDelay(5000);
   }
 }
 
 void sendingDataThingsboard(float temp, float hum) {
-  WiFi.begin(WIFI_AP_NAME, WIFI_PASSWORD);
+  WiFi.disconnect(); 
   InitWiFi();
   if (WiFi.status() != WL_CONNECTED) {
     reconnect();
@@ -179,6 +177,8 @@ void sendingDataThingsboard(float temp, float hum) {
   Serial.println("Sending data...");
   tb.sendTelemetryFloat("temperature", temp);
   tb.sendTelemetryFloat("humidity", hum);
+  WiFi.disconnect(); 
+  setupReceivingData(); 
 }
 
 void loop() {
